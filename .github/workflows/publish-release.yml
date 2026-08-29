@@ -1,0 +1,48 @@
+name: Publish release artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to update
+        required: true
+        default: v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release artifacts
+        uses: actions/checkout@v4
+
+      - name: Verify release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            "release-artifacts/android/app-release.apk"
+            "release-artifacts/linux/Blastova-1.0.0-arm64.AppImage"
+            "release-artifacts/mac/Blastova-1.0.0-arm64.dmg"
+            "release-artifacts/win/Blastova Setup 1.0.0.exe"
+          )
+          for file in "${required_files[@]}"; do
+            test -f "$file" || { echo "Missing release artifact: $file" >&2; exit 1; }
+          done
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" \
+            "release-artifacts/android/app-release.apk" \
+            "release-artifacts/linux/Blastova-1.0.0-arm64.AppImage" \
+            "release-artifacts/mac/Blastova-1.0.0-arm64.dmg" \
+            "release-artifacts/win/Blastova Setup 1.0.0.exe#Blastova.Setup.1.0.0.exe" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber

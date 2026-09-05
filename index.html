@@ -15,6 +15,68 @@
     @keyframes blastova-pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
     @keyframes blastova-tank-move { from{transform:translateY(-50%) translateX(-100px)} to{transform:translateY(-50%) translateX(800px)} }
     #app-splash-title { font-size:clamp(22px,5vw,42px); text-shadow:0 0 8px #cc4400,0 0 18px #aa2200; will-change:opacity; }
+    .android-app-modal[hidden] { display:none; }
+    .android-app-modal { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(3,7,12,.82); }
+    .android-app-panel { position:relative; width:min(420px,100%); padding:28px 24px 24px; color:#fff; text-align:center; background:linear-gradient(180deg,#2c363f 0%,#151b22 100%); border:2px solid #3a4652; border-bottom:3px solid #d4af37; box-shadow:0 8px 24px rgba(0,0,0,.55),0 0 24px rgba(0,162,255,.16); clip-path:polygon(4% 0,96% 0,100% 5%,100% 95%,96% 100%,4% 100%,0 95%,0 5%); font-family:'Teko Local','Teko',monospace; }
+    .android-app-panel::before { content:''; position:absolute; inset:8px; border:1px solid rgba(0,200,255,.3); pointer-events:none; }
+    .android-app-kicker { position:relative; color:#d4af37; font-size:14px; letter-spacing:2px; text-shadow:0 0 8px rgba(212,175,55,.5); }
+    .android-app-title { position:relative; margin:10px 0 4px; font-family:'Black Ops One Local','BlackOpsOne',monospace; font-size:clamp(24px,8vw,36px); letter-spacing:2px; }
+    .android-app-copy { position:relative; margin:0 auto 20px; max-width:290px; color:rgba(140,195,225,.85); font-size:16px; line-height:1.2; letter-spacing:1px; text-transform:uppercase; }
+    .android-app-actions { position:relative; display:flex; flex-direction:column; gap:8px; }
+    .android-app-actions a,.android-app-actions button { min-height:42px; padding:8px 14px; color:#3df4ff; background:linear-gradient(#2a3a3a,#1a2626); border:1px solid #3a7a99; clip-path:polygon(4% 0,96% 0,100% 18%,100% 82%,96% 100%,4% 100%,0 82%,0 18%); cursor:pointer; font:600 14px 'Black Ops One Local','BlackOpsOne',monospace; letter-spacing:1px; text-transform:uppercase; }
+    .android-app-actions a:first-child { color:#101820; background:linear-gradient(#f0c94b,#b98d18); border-color:#f1d36d; text-decoration:none; }
+    .android-app-actions a:hover,.android-app-actions button:hover { filter:brightness(1.12); }
+    @keyframes orientation-scan { 0%,100% { opacity:.45; transform:scaleX(.82); } 50% { opacity:1; transform:scaleX(1); } }
+    @keyframes orientation-rotate { 0%,20% { transform:rotate(0deg); } 55%,100% { transform:rotate(90deg); } }
+    #portrait-orientation-gate { display:none; }
+    @media (orientation: portrait) {
+      #portrait-orientation-gate {
+        position:fixed;
+        inset:0;
+        z-index:100000;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        gap:18px;
+        padding:32px 24px;
+        color:#eaf5ff;
+        background:radial-gradient(circle at 50% 38%, #18354a 0, #0b1722 42%, #05090d 100%);
+        text-align:center;
+        font-family:"Trebuchet MS", "Segoe UI", sans-serif;
+        overflow:hidden;
+      }
+      #portrait-orientation-gate::before,
+      #portrait-orientation-gate::after { content:""; position:absolute; left:0; right:0; height:1px; background:#ff7a20; opacity:.25; animation:orientation-scan 2.4s ease-in-out infinite; }
+      #portrait-orientation-gate::before { top:18%; }
+      #portrait-orientation-gate::after { bottom:18%; animation-delay:1.2s; }
+      .orientation-kicker { color:#ff9a4d; font-size:11px; font-weight:700; letter-spacing:.22em; }
+      .orientation-device { position:relative; display:flex; align-items:center; justify-content:center; width:190px; height:116px; }
+      .orientation-device::after { content:none; }
+      .orientation-phone { position:absolute; width:42px; height:76px; border:3px solid #8ddcff; border-radius:8px; background:#102b3c; box-shadow:0 0 18px rgba(82,210,255,.25); animation:orientation-rotate 2.8s ease-in-out infinite alternate; }
+      .orientation-phone::before { content:""; position:absolute; left:8px; right:8px; top:8px; bottom:8px; border:1px solid rgba(141,220,255,.4); background:linear-gradient(135deg, transparent 45%, rgba(255,122,32,.8) 46%, transparent 51%); }
+      .orientation-target { position:absolute; width:84px; height:48px; border:3px solid #ff7a20; border-radius:8px; background:#261b16; box-shadow:0 0 22px rgba(255,122,32,.28); opacity:.9; }
+      .orientation-target::before { content:""; position:absolute; inset:8px; border:1px solid rgba(255,190,120,.55); }
+      .orientation-title { margin:0; color:#fff; font-family:"BlackOpsOne", Impact, sans-serif; font-size:clamp(24px,8vw,38px); letter-spacing:.06em; text-shadow:0 0 14px rgba(255,122,32,.35); }
+      .orientation-copy { max-width:290px; margin:0; color:#a9c5d3; font-size:13px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+      .orientation-status { display:flex; align-items:center; gap:8px; color:#ffb36f; font-size:10px; font-weight:700; letter-spacing:.16em; }
+      .orientation-status::before { content:""; width:7px; height:7px; border-radius:50%; background:#ff7a20; box-shadow:0 0 10px #ff7a20; animation:orientation-scan 1.2s ease-in-out infinite; }
+      #portrait-orientation-gate { color:#fff; background-color:#070d14; background-image:linear-gradient(rgba(5,10,20,.28),rgba(5,10,20,.28)),linear-gradient(rgba(18,30,49,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(18,30,49,.3) 1px,transparent 1px); background-size:auto,30px 30px,30px 30px; background-position:center,0 0,0 0; font-family:"Teko Local","Teko",monospace; letter-spacing:1px; }
+      #portrait-orientation-gate::before { content:""; inset:12px; left:12px; right:12px; top:12px; bottom:12px; width:auto; height:auto; border:1px solid rgba(0,162,255,.28); background:none; clip-path:polygon(2% 0,98% 0,100% 2%,100% 98%,98% 100%,2% 100%,0 98%,0 2%); }
+      #portrait-orientation-gate::after { content:none; }
+      .orientation-kicker { color:#d4af37; font-size:14px; font-weight:600; letter-spacing:2px; text-shadow:0 0 8px rgba(212,175,55,.5); }
+      .orientation-phone { width:42px; height:76px; border:2px solid #3df4ff; border-radius:2px; background:#1c242c; box-shadow:0 0 14px rgba(0,162,255,.35); }
+      .orientation-phone::before { left:7px; right:7px; top:7px; bottom:7px; border:1px solid rgba(61,244,255,.45); background:repeating-linear-gradient(0deg,transparent 0 7px,rgba(61,244,255,.14) 8px); }
+      .orientation-target { width:84px; height:48px; border:2px solid #d4af37; border-radius:2px; background:#1c242c; box-shadow:0 0 16px rgba(212,175,55,.3); clip-path:polygon(8% 0,92% 0,100% 12%,100% 88%,92% 100%,8% 100%,0 88%,0 12%); }
+      .orientation-target::before { inset:8px; border:1px solid rgba(212,175,55,.55); }
+      .orientation-title { font-family:"Black Ops One Local","BlackOpsOne",monospace; font-size:clamp(24px,8vw,38px); letter-spacing:2px; text-shadow:0 0 8px rgba(255,255,255,.2); }
+      .orientation-copy { color:rgba(140,195,225,.8); font-size:16px; font-weight:600; letter-spacing:1px; }
+      .orientation-status { color:#d4af37; font-size:13px; font-weight:600; letter-spacing:2px; text-shadow:0 0 8px rgba(212,175,55,.5); }
+      .orientation-status::before { width:6px; height:6px; background:#3df4ff; box-shadow:0 0 10px #3df4ff; }
+      body > iframe,
+      body > #app-splash,
+      body > .hero-shell { visibility:hidden; }
+    }
   </style>
   <style>
     .platforms { display: inline-flex; align-items: center; gap: 10px; margin-top: 14px; }
@@ -33,13 +95,52 @@
   </style>
 </head>
 <body>
+  <div class="android-app-modal" id="android-app-modal" hidden role="dialog" aria-modal="true" aria-labelledby="android-app-title">
+    <div class="android-app-panel">
+      <div class="android-app-kicker">ANDROID DEPLOYMENT</div>
+      <h2 class="android-app-title" id="android-app-title">BETTER IN THE APP</h2>
+      <p class="android-app-copy">Install the native build for fullscreen gameplay and smoother performance.</p>
+      <div class="android-app-actions">
+        <a href="https://github.com/KodeKenobi/blastova-website/releases/latest/download/app-release.apk">DOWNLOAD ANDROID APP</a>
+        <button type="button" id="android-app-browser">CONTINUE IN BROWSER</button>
+      </div>
+    </div>
+  </div>
+  <div id="portrait-orientation-gate" aria-live="polite">
+    <div class="orientation-device" aria-hidden="true"><div class="orientation-phone"></div><div class="orientation-target"></div></div>
+    <h1 class="orientation-title">ROTATE DEVICE</h1>
+  </div>
   <!-- Actual Phaser game running W1W1 in attract mode as fullscreen background -->
   <iframe
-    src="game/index.html?landingAttract=1"
+    src="game/index.html?landingAttract=1&noMusic=1"
     style="position:fixed;inset:0;width:100%;height:100%;border:none;pointer-events:auto;z-index:0;"
+    allow="autoplay 'none'"
     title="Blastova gameplay"
     onload=""
   ></iframe>
+  <script>
+  (function(){
+    var gameFrame=document.querySelector('iframe[src*="noMusic=1"]');
+    if(!gameFrame)return;
+    function silenceEmbeddedGame(){
+      try{
+        var scene=gameFrame.contentWindow.__tdScene;
+        if(!scene||!scene.sound)return;
+        if(!scene.__landingAudioSilenced){
+          scene.sound.setMute(true);
+          scene.sound.setVolume(0);
+          scene.sound.setMute=function(){return this;};
+          scene.sound.setVolume=function(){return this;};
+          scene.__landingAudioSilenced=true;
+        }
+        if(scene.stopAllActiveGameAudio)scene.stopAllActiveGameAudio();
+        if(scene.stopThemeMusic)scene.stopThemeMusic();
+      }catch(e){}
+    }
+    gameFrame.addEventListener('load',silenceEmbeddedGame);
+    window.setInterval(silenceEmbeddedGame,100);
+  })();
+  </script>
 
   <div id="app-splash" style="position:fixed;inset:0;z-index:9999;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity 0.5s ease;">
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:90vw;max-width:600px;">
@@ -100,7 +201,7 @@
         <p class="subtitle">The Last Wave</p>
         <p class="summary">Stand against fractured front lines, absorb armored assaults, and outlast a battlefield that keeps tightening around your last defense.</p>
         <div class="cta-row">
-          <a class="btn" href="https://blastova-frontend-production.up.railway.app/" target="_blank" rel="noopener">Play Now</a>
+          <a class="btn" id="play-now-link" href="https://blastova-frontend-production.up.railway.app/" target="_blank" rel="noopener">Play Now</a>
         </div>
         <p class="meta">Play instantly in browser or download.</p>
         <div class="platforms">
@@ -120,5 +221,30 @@
       </div>
     </section>
   </div>
+  <script>
+  (function(){
+    var playLink=document.getElementById('play-now-link');
+    var modal=document.getElementById('android-app-modal');
+    var browserButton=document.getElementById('android-app-browser');
+    if(!playLink||!modal||!browserButton)return;
+    var isAndroid=/Android/i.test(navigator.userAgent||'');
+    function closeModal(){ modal.hidden=true; }
+    playLink.addEventListener('click',function(event){
+      if(!isAndroid)return;
+      event.preventDefault();
+      modal.hidden=false;
+    });
+    browserButton.addEventListener('click',function(){
+      closeModal();
+      window.open(playLink.href,'_blank','noopener');
+    });
+    modal.addEventListener('click',function(event){
+      if(event.target===modal)closeModal();
+    });
+    document.addEventListener('keydown',function(event){
+      if(event.key==='Escape')closeModal();
+    });
+  })();
+  </script>
 </body>
 </html>

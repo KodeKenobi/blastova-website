@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+import { hapticTap, hapticMedium, hapticSuccess } from './utils/native-haptics';
 import {
   commanderXpForLevel,
   createBoardScalers,
@@ -113,6 +114,7 @@ import { setupBuildPhaseControls as setupBuildPhaseControlsSystem } from './syst
 import { setupUI as setupGameUI } from './systems/game-ui-system';
 import { setupAudioSettingsPanel as setupGameAudioSettingsPanel } from './systems/game-audio-settings-panel-system';
 import { createScene as createGameScene } from './systems/game-scene-create-system';
+import { initOnboarding } from './systems/game-onboarding-system';
 import { moveEnemiesAlongPath as moveGameEnemiesAlongPath } from './systems/game-enemy-movement-system';
 import { fireTowerWeapon as fireTowerWeaponSystem } from './systems/game-tower-fire-system';
 import { endGame as endGameSystem } from './systems/game-endgame-system';
@@ -189,11 +191,11 @@ import {
   getCommanderRouteOptions as getCommanderRouteOptionsSystem,
   getEnemyTrayCards as getEnemyTrayCardsSystem,
   initializeMultiplayerMode as initializeMultiplayerModeSystem,
+  isEnemyCommanderRole as isEnemyCommanderRoleSystem,
   isMultiplayerEnemyCommanderRole as isMultiplayerEnemyCommanderRoleSystem,
   isMultiplayerModeEnabled as isMultiplayerModeEnabledSystem,
   pushEnemyTrayCardsToHtml as pushEnemyTrayCardsToHtmlSystem,
   runDefenderTowerBot as runDefenderTowerBotSystem,
-  runEnemyCommanderBot as runEnemyCommanderBotSystem,
   setupEnemySpawnEntrances as setupEnemySpawnEntrancesSystem,
   seedDefenderBotLoadout as seedDefenderBotLoadoutSystem,
   setCommanderPlaneLane as setCommanderPlaneLaneSystem,
@@ -208,7 +210,7 @@ import {
   updateMultiplayerCommanderHud as updateMultiplayerCommanderHudSystem,
   updateMultiplayerWaveRuntime as updateMultiplayerWaveRuntimeSystem,
 } from './systems/game-multiplayer-system';
-import BLUEPRINTS_EMBEDDED_HTML from './tower-blueprints-embedded.html?raw';
+import BLUEPRINTS_EMBEDDED_HTML from '../public/tower-blueprints.html?raw';
 
 // --- Native platform helpers ---
 const IS_NATIVE = Capacitor.isNativePlatform();
@@ -741,7 +743,9 @@ const GameScene = new Phaser.Class({
   },
 
   create: function () {
-    return createGameScene.call(this);
+    const result = createGameScene.call(this);
+    initOnboarding();
+    return result;
   },
 
   createEnemyAnimations: function () {
@@ -1733,6 +1737,7 @@ const GameScene = new Phaser.Class({
           .setInteractive({ useHandCursor: true });
 
         clickTarget.on('pointerdown', () => {
+          hapticTap();
           if (!this.selectedTowerDef) {
             this.setStatus('Select a weapon from the loadout HUD first.', '#ffb18b');
             return;
@@ -1956,6 +1961,24 @@ const GameScene = new Phaser.Class({
     return this.htmlWaveClearMountPromise;
   },
 
+  bindHtmlEnemyDeployCanvas: function () {
+    const canvas = this.game?.canvas;
+    if (!canvas || this.htmlEnemyDeployCanvas === canvas) return;
+    canvas.addEventListener('pointerdown', (event) => {
+      const pendingEnemy = window.__tdPendingEnemyDeploy;
+      if (!pendingEnemy || !this.isMultiplayerEnemyCommanderRole?.()) return;
+      const now = performance.now();
+      if (now - (this.lastHtmlEnemyDeployAt || 0) < 90) return;
+      const rect = canvas.getBoundingClientRect();
+      const worldX = ((event.clientX - rect.left) / Math.max(1, rect.width)) * BOARD_WIDTH;
+      const worldY = ((event.clientY - rect.top) / Math.max(1, rect.height)) * BOARD_HEIGHT;
+      if (this.handleEnemyTrayDrop?.(pendingEnemy, worldX, worldY)) {
+        this.lastHtmlEnemyDeployAt = now;
+      }
+    });
+    this.htmlEnemyDeployCanvas = canvas;
+  },
+
   setupHtmlWeaponTray: function () {
     if (!this.useHtmlWeaponTray || typeof document === 'undefined') return;
     window.__tdScene = this;
@@ -1968,6 +1991,7 @@ const GameScene = new Phaser.Class({
 
     if (this.htmlWeaponTrayRoot?.isConnected) {
       this.syncHtmlWeaponTrayBounds();
+      this.bindHtmlEnemyDeployCanvas?.();
       if (typeof window.__setHtmlTrayVisible === 'function') window.__setHtmlTrayVisible(true);
       return;
     }
@@ -1985,6 +2009,7 @@ const GameScene = new Phaser.Class({
         wrapper.innerHTML = cleanMarkup;
         document.body.appendChild(wrapper);
         this.htmlWeaponTrayRoot = wrapper;
+        this.bindHtmlEnemyDeployCanvas?.();
 
         // Re-execute each script block after DOM is live
         const scriptRe = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
@@ -2795,6 +2820,9 @@ const GameScene = new Phaser.Class({
             elements.unlockOverlay.classList.remove('is-visible');
             elements.unlockOverlay.setAttribute('aria-hidden', 'true');
           }
+          const upgradeUnlockSound = new Audio('/assets/audio/upgrade-unlock.mp3');
+          upgradeUnlockSound.volume = 0.6;
+          void upgradeUnlockSound.play().catch(() => {});
           this.playUiButtonSfx?.('confirm');
         };
       }
@@ -2803,6 +2831,7 @@ const GameScene = new Phaser.Class({
       if (this.htmlWaveClearRoot) {
         this.htmlWaveClearRoot.style.pointerEvents = '';
       }
+      window.__playTransitionSound?.();
       this.syncHtmlHudOverlayBounds();
       this.triggerWaveClearTitleAnimation();
       this.playWaveClearGamificationSequence(summary);
@@ -3011,6 +3040,7 @@ const GameScene = new Phaser.Class({
     overlay.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
 
     if (shouldOpen) {
+      window.__playTransitionSound?.();
       const iframe = this.blueprintOverlayRoot.querySelector('.bp-iframe');
       if (iframe) {
         // On native WebView, use srcdoc to avoid path/routing quirks that can
@@ -3018,11 +3048,17 @@ const GameScene = new Phaser.Class({
         if (IS_NATIVE) {
           if (!iframe.getAttribute('srcdoc')) {
             iframe.setAttribute('srcdoc', BLUEPRINTS_EMBEDDED_HTML_WITH_BASE);
+            // Use postMessage to reliably communicate mode after iframe loads
+            setTimeout(() => {
+              const isAttackRole = this.isMultiplayerEnemyCommanderRole?.();
+              const mode = isAttackRole ? 'attack' : 'defense';
+              iframe.contentWindow?.postMessage({ type: 'setBlueprintMode', mode }, '*');
+            }, 100);
           }
           // Do NOT set src after srcdoc — see note in setupBlueprintOverlay.
         } else {
           const isAttackRole = (() => {
-            if (this.gameState?.selectedMode === 'multiplayer' && this.gameState?.multiplayerRole === 'enemyCommander') {
+            if (this.isMultiplayerEnemyCommanderRole?.()) {
               return true;
             }
             if (!worldSelectVisible) {
@@ -3211,8 +3247,7 @@ const GameScene = new Phaser.Class({
     }
     this.nextHtmlHudUpdateAt = now + this.htmlHudUpdateIntervalMs;
 
-    const isAttackRole = this.gameState?.selectedMode === 'multiplayer'
-      && this.gameState?.multiplayerRole === 'enemyCommander';
+    const isAttackRole = this.isEnemyCommanderRole?.();
     const commanderData = this.loadCommanderData ? this.loadCommanderData() : { name: 'Player' };
     const commanderName = this.getCommanderDisplayName ? this.getCommanderDisplayName() : String(commanderData?.name || 'Player');
     const displayCurrency = isAttackRole
@@ -3286,6 +3321,10 @@ const GameScene = new Phaser.Class({
     return isMultiplayerEnemyCommanderRoleSystem.call(this);
   },
 
+  isEnemyCommanderRole: function () {
+    return isEnemyCommanderRoleSystem.call(this);
+  },
+
   canLocalPlayerBuildTowers: function () {
     return canLocalPlayerBuildTowersSystem.call(this);
   },
@@ -3318,9 +3357,6 @@ const GameScene = new Phaser.Class({
     return updateMultiplayerWaveRuntimeSystem.call(this, activeWaveEnemies, laneCleared);
   },
 
-  runEnemyCommanderBot: function () {
-    return runEnemyCommanderBotSystem.call(this);
-  },
 
   runDefenderTowerBot: function (activeWaveEnemies = []) {
     return runDefenderTowerBotSystem.call(this, activeWaveEnemies);
@@ -3692,7 +3728,7 @@ const GameScene = new Phaser.Class({
     });
   },
 
-  selectTowerDef: function (towerDef, preservePlacedSelection = false) {
+  selectTowerDef: function (towerDef, preservePlacedSelection = false, options = {}) {
     if (towerDef && !this.isWeaponUnlockedForPlayer(towerDef)) {
       this.setStatus(
         towerDef.name + ' unlocks at player level ' + towerDef.unlockLevel + '.',
@@ -3798,6 +3834,7 @@ const GameScene = new Phaser.Class({
     this.refreshSelectedPlacedTowerDetails();
     this.updateTowerBaseIndicators();
     if (this.useHtmlWeaponTray && this.selectedTowerDef) this._notifyHtmlTrayDetail(this.selectedTowerDef);
+    if (!options.silent) window.__blastovaOnboarding?.notify('turret-selected');
   },
 
   getTowerUpgradeCapForPlayerLevel: function () {
@@ -3985,6 +4022,7 @@ const GameScene = new Phaser.Class({
     this.updateHud();
     this.refreshSelectedPlacedTowerDetails();
     this.setStatus('Turret upgraded to tier L' + nextLevel + '.', '#89ffd0');
+    window.__blastovaOnboarding?.notify('turret-upgraded');
   },
 
   removeSelectedPlacedTower: function () {
@@ -4011,6 +4049,7 @@ const GameScene = new Phaser.Class({
     this.updateHud();
     this.refreshSelectedPlacedTowerDetails();
     this.setStatus('Turret removed. +' + refundAmount + ' gold refunded.', '#89ffd0');
+    window.__blastovaOnboarding?.notify('turret-sold');
   },
 
   getWeaponReachColor: function (towerDef) {
@@ -4200,7 +4239,9 @@ const GameScene = new Phaser.Class({
       return;
     }
 
-    if (this.towers.children.size === 0 && !this.isMultiplayerEnemyCommanderRole?.()) {
+    if (this.towers.children.size === 0
+      && !this.isMultiplayerEnemyCommanderRole?.()
+      && !this.isMultiplayerModeEnabled?.()) {
       this.setStatus('Place at least one turret before starting the wave.', '#ffb18b');
       return;
     }
@@ -4208,6 +4249,7 @@ const GameScene = new Phaser.Class({
     this.cancelWaveCountdown();
     this.toggleBlueprintOverlay(false);
     this.gameState.prepPhase = false;
+    window.__blastovaOnboarding?.notify('wave-started');
     if (this.startWaveButton) {
       this.startWaveButton.disableInteractive();
       this.startWaveButton.setFillStyle(0x3b4f5b, 0.75);
@@ -5299,6 +5341,7 @@ const GameScene = new Phaser.Class({
     this.input.setDraggable(tower);
 
     tower.on('pointerdown', () => {
+      hapticTap();
       if (!tower?.active || this.draggingFromTray || this.isMultiplayerEnemyCommanderRole?.()) {
         return;
       }
@@ -5477,15 +5520,15 @@ const GameScene = new Phaser.Class({
     return checkOnlineWeaponUnlocksSystem.call(this, options);
   },
 
-  updateWeaponUnlockState: function () {
+  updateWeaponUnlockState: function (options = {}) {
     this.renderWeaponCarousel();
     if (this.selectedTowerDef && this.isWeaponUnlockedForPlayer(this.selectedTowerDef)) {
-      this.selectTowerDef(this.selectedTowerDef);
+      this.selectTowerDef(this.selectedTowerDef, false, options);
       return;
     }
 
     const fallback = this.towerCatalog.find((tower) => this.isWeaponUnlockedForPlayer(tower)) || this.towerCatalog[0] || null;
-    this.selectTowerDef(fallback);
+    this.selectTowerDef(fallback, false, options);
   },
 
   calculateWaveCompletionGoldBonus: function (completedWave) {
@@ -8721,6 +8764,9 @@ const GameScene = new Phaser.Class({
 
     const effectiveArmor = Math.max(0, armor - armorPen);
     damage *= Math.max(0.26, 1 - (effectiveArmor * 0.28));
+    if (this.gameState?.selectedMode === 'vsAiAttack') {
+      damage *= 0.55;
+    }
     return damage;
   },
 
@@ -8856,6 +8902,9 @@ const GameScene = new Phaser.Class({
 
     const effectiveArmor = Math.max(0, armor - armorPen);
     damage *= Math.max(0.26, 1 - (effectiveArmor * 0.28));
+    if (this.gameState?.selectedMode === 'vsAiAttack') {
+      damage *= 0.55;
+    }
     return damage;
   },
 
@@ -9584,8 +9633,6 @@ const GameScene = new Phaser.Class({
       return;
     }
 
-    const completedWave = Math.max(1, Number(this.gameState?.wave || 1));
-
     const isLandingAttractMode = typeof window !== 'undefined' && window.__landingAttractMode === true;
     if (isLandingAttractMode) {
       this.handleWaveCompletionProgression(completedWave);
@@ -9606,11 +9653,12 @@ const GameScene = new Phaser.Class({
     }
 
     this.stopThemeMusic();
+    const completedWave = this.gameState.wave;
     this.handleWaveCompletionProgression(completedWave);
     this.repairTowersBetweenWaves();
     const awardedGold = Math.max(0, Number(this.lastWaveCompletionGoldBonus || 0));
 
-  const nextWaveNumber = completedWave >= 5 ? 1 : (completedWave + 1);
+    const nextWaveNumber = this.gameState.wave + 1;
     const waveSummary = this.buildWaveTransitionSummary(completedWave, nextWaveNumber, awardedGold);
     // Merge any pending online weapon unlocks earned this wave into the summary.
     if (Array.isArray(this._pendingOnlineWeaponUnlocks) && this._pendingOnlineWeaponUnlocks.length > 0) {
@@ -10256,6 +10304,9 @@ const GameScene = new Phaser.Class({
         const def  = towers[idx];
         const cost = getDefCost(def);
         if ((this.gameState?.gold || 0) >= cost) {
+          const upgradeSound = new Audio('/assets/audio/upgrade-unlock.mp3');
+          upgradeSound.volume = 0.6;
+          void upgradeSound.play().catch(() => {});
           this.gameState.gold -= cost;
           if (!this.gameState.weaponUpgradeLevels) this.gameState.weaponUpgradeLevels = {};
           const prevLevel = getDefLevel(def);
@@ -10441,6 +10492,7 @@ const GameScene = new Phaser.Class({
 
     let resolved = false;
     const closeSplash = () => {
+      hapticMedium();
       if (resolved) {
         return;
       }
@@ -10712,8 +10764,7 @@ const GameScene = new Phaser.Class({
   },
 
   updateHud: function () {
-    const isAttackRole = this.gameState?.selectedMode === 'multiplayer'
-      && this.gameState?.multiplayerRole === 'enemyCommander';
+    const isAttackRole = this.isEnemyCommanderRole?.();
     const commanderName = this.getCommanderDisplayName ? this.getCommanderDisplayName() : (this.loadCommanderData?.().name || 'Commander');
     const displayCurrency = isAttackRole
       ? Math.round(Math.max(0, Number(this.multiplayerRuntime?.threat || 0)))
@@ -11263,7 +11314,7 @@ const GameScene = new Phaser.Class({
     this.worldOneAtmosphereKey = null;
   },
 
-  showWorldSelectionSplashScreen: function () {
+  showWorldSelectionSplashScreen: function (skipFrontStage) {
     try {
       console.log('[GameFlow]', {
         event: 'show_world_selection_splash',
@@ -11319,10 +11370,10 @@ const GameScene = new Phaser.Class({
           event: 'show_world_select_overlay',
           page: window.location.pathname + window.location.search,
           loggedIn: !!window.__supabaseUserId,
-          skipFrontStage: true,
+          skipFrontStage: !!skipFrontStage,
         });
       } catch (_) {}
-      window.__showWorldSelect({ skipFrontStage: true });
+      window.__showWorldSelect({ skipFrontStage: !!skipFrontStage });
     }
   },
 

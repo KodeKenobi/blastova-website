@@ -1,6 +1,12 @@
 <style>
   [data-weapon-tray-root="true"] {
     --ht-tray-height: 100px;
+    pointer-events: none;
+  }
+
+  [data-weapon-tray-root="true"] #ht-weapon-tray,
+  [data-weapon-tray-root="true"] #ht-remove-btn {
+    pointer-events: auto;
   }
 
   @font-face {
@@ -1316,6 +1322,7 @@
     if (s && s.highlightEnemySpawnDropTarget) {
       s.highlightEnemySpawnDropTarget(null, false);
     }
+    window.__tdPendingEnemyDeploy = null;
   }
 
   function updateArmedWeaponAim(clientX, clientY) {
@@ -1391,6 +1398,7 @@
       s.draggingFromTray = false;
       s.activeTrayTowerDef = towerDefRef;
       s.selectedTowerDef = towerDefRef;
+      if (window.__blastovaOnboarding) window.__blastovaOnboarding.notify('turret-selected');
       if (s._notifyHtmlTrayDetail) s._notifyHtmlTrayDetail(towerDefRef);
       if (s.updateWeaponReachGlow) {
         s.updateWeaponReachGlow();
@@ -1430,6 +1438,7 @@
     var unitLabel = String(label || enemyDefRef.label || enemyType || 'unit');
     pendingEnemyType = enemyType;
     pendingEnemyLabel = unitLabel;
+    window.__tdPendingEnemyDeploy = enemyDefRef;
     var s = resolveScene();
     updateEnemyDetailFromCard({ enemyDefRef: enemyDefRef, label: unitLabel });
     updateEnemyDetailRoleText();
@@ -1438,7 +1447,7 @@
         s.highlightEnemySpawnDropTarget(null, false, { planeArmGlow: true, triggerPlaneSweep: true });
       } else {
         // Show armed entrance guidance and trigger one spawn-FX pulse for this selection.
-        s.highlightEnemySpawnDropTarget(null, true, { triggerArmPulse: true });
+        s.highlightEnemySpawnDropTarget(null, true, { triggerArmPulse: true, allRoutes: true, hideCircles: true });
       }
     }
     if (s && s.setStatus) {
@@ -1472,11 +1481,15 @@
     var trayRoot = tray && tray.closest ? tray.closest('[data-weapon-tray-root="true"]') : null;
     if (visible) {
       tray.classList.remove('ht-hidden');
-      if (trayRoot) trayRoot.style.pointerEvents = 'auto';
+      if (trayRoot) trayRoot.style.pointerEvents = 'none';
     } else {
       tray.classList.add('ht-hidden');
       if (trayRoot) trayRoot.style.pointerEvents = 'none';
     }
+  };
+
+  window.__clearHtmlPendingEnemyDeploy = function () {
+    clearPendingEnemyDeploy();
   };
 
   // Keep this hook as a no-op so game-side compatibility checks keep Phaser
@@ -2158,9 +2171,6 @@
       if (activeDrag.kind === 'enemy') {
         if (wc && s.handleEnemyTrayDrop) {
           var dropped = s.handleEnemyTrayDrop(activeDrag.enemyDef, wc.x, wc.y);
-          if (dropped) {
-            clearPendingEnemyDeploy();
-          }
         }
         if (s.highlightEnemySpawnDropTarget) s.highlightEnemySpawnDropTarget(null);
       } else {
@@ -2477,9 +2487,6 @@
     var wc = screenToWorld(e.clientX, e.clientY);
     if (!wc) return;
     var ok = s.handleEnemyTrayDrop(pendingEnemyDeploy, wc.x, wc.y);
-    if (ok) {
-      clearPendingEnemyDeploy();
-    }
   }, true);
 
 })();

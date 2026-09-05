@@ -1086,6 +1086,85 @@
   #wave-clear-overlay .wc-hidden {
     display: none !important;
   }
+
+  /* Keep the clearance report grounded in field equipment rather than sci-fi UI. */
+  #wave-clear-overlay .wc-root {
+    background:
+      linear-gradient(135deg, rgba(23, 30, 20, 0.94), rgba(56, 58, 37, 0.9)),
+      radial-gradient(circle at 50% 8%, rgba(178, 154, 74, 0.2), transparent 42%),
+      radial-gradient(circle at 50% 100%, rgba(10, 14, 9, 0.82), rgba(3, 5, 3, 0.98));
+  }
+
+  #wave-clear-overlay .wc-root::before {
+    background:
+      linear-gradient(rgba(190, 172, 103, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(190, 172, 103, 0.035) 1px, transparent 1px);
+  }
+
+  #wave-clear-overlay .wc-panel,
+  #wave-clear-overlay .wc-unlock-card {
+    background:
+      linear-gradient(180deg, rgba(42, 48, 32, 0.96), rgba(17, 22, 15, 0.98)),
+      radial-gradient(circle at 52% 10%, rgba(177, 157, 75, 0.16), transparent 32%);
+    box-shadow:
+      0 0 0 2px rgba(169, 151, 77, 0.82),
+      0 0 0 6px rgba(35, 41, 27, 0.96),
+      0 0 28px rgba(117, 107, 54, 0.24),
+      inset 0 0 0 2px rgba(209, 194, 123, 0.22),
+      inset 0 0 50px rgba(7, 11, 7, 0.34);
+  }
+
+  #wave-clear-overlay .wc-panel::before,
+  #wave-clear-overlay .wc-unlock-card::before {
+    border-color: rgba(185, 164, 77, 0.62);
+    box-shadow: inset 0 0 24px rgba(121, 113, 54, 0.16), 0 0 14px rgba(121, 113, 54, 0.12);
+  }
+
+  #wave-clear-overlay .wc-corner,
+  #wave-clear-overlay .wc-edge,
+  #wave-clear-overlay .wc-unlock-corner,
+  #wave-clear-overlay .wc-unlock-edge {
+    border-color: rgba(191, 174, 99, 0.62);
+    background: linear-gradient(180deg, rgba(82, 85, 57, 0.96), rgba(28, 34, 23, 0.98));
+    box-shadow: inset 0 0 10px rgba(216, 207, 147, 0.08), 0 0 12px rgba(112, 103, 52, 0.2);
+  }
+
+  #wave-clear-overlay .wc-level-chip,
+  #wave-clear-overlay .wc-hero,
+  #wave-clear-overlay .wc-block,
+  #wave-clear-overlay .wc-reward {
+    background: linear-gradient(180deg, rgba(57, 65, 42, 0.98), rgba(24, 30, 20, 0.98));
+    border-color: rgba(180, 161, 79, 0.56);
+  }
+
+  #wave-clear-overlay .wc-level-label,
+  #wave-clear-overlay .wc-block-title,
+  #wave-clear-overlay .wc-reward-value {
+    color: #d6bd69;
+  }
+
+  #wave-clear-overlay .wc-level-value,
+  #wave-clear-overlay .wc-title,
+  #wave-clear-overlay .wc-subtitle,
+  #wave-clear-overlay .wc-stat-value {
+    color: #f0ead0;
+    text-shadow: 0 0 10px rgba(206, 183, 88, 0.22);
+  }
+
+  #wave-clear-overlay .wc-divider {
+    background: linear-gradient(90deg, transparent, rgba(190, 169, 78, 0.62), transparent);
+  }
+
+  #wave-clear-overlay .wc-btn {
+    background: linear-gradient(180deg, rgba(69, 77, 51, 0.98), rgba(28, 35, 23, 0.98));
+    border-color: rgba(183, 164, 81, 0.68);
+  }
+
+  #wave-clear-overlay .wc-btn.primary {
+    background: linear-gradient(180deg, rgba(100, 112, 55, 0.98), rgba(52, 64, 29, 0.98));
+    border-color: #d0b75b;
+    color: #fff3c4;
+  }
 </style>
 <div class="wc-root">
   <div class="wc-vignette"></div>

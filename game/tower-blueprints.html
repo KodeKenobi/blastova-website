@@ -1933,6 +1933,10 @@
         font-size: 8px;
       }
 
+      body.evolve-open .stat-delta {
+        margin-left: -12px;
+      }
+
       .stat-adjust button {
         width: 24px;
         height: 18px;
@@ -2279,11 +2283,6 @@
 
           <div class="top-tabs" role="tablist" aria-label="Blueprint Categories">
             <div class="tab active">TOWERS</div>
-            <div class="tab">UPGRADES</div>
-            <div class="tab">FORGE</div>
-            <div class="tab">REPAIRS</div>
-            <div class="tab">BEACONS</div>
-            <div class="tab">SYSTEMS</div>
           </div>
 
           <section class="arena">
@@ -2381,23 +2380,6 @@
 
                 <div class="tier-summary" id="tierDeltaSummary">Tier 1 base stats.</div>
                 <div class="tier-summary" id="turretUnlockRoadmap" hidden></div>
-                <div class="turret-preview-strip" id="turretUnlockPreview" hidden>
-                  <div class="turret-preview-card" data-turret-mk="1">
-                    <div class="turret-preview-thumb"><div class="turret-preview-overlay"></div></div>
-                    <div class="turret-preview-label">MK1</div>
-                    <div class="turret-preview-state">Unlocked</div>
-                  </div>
-                  <div class="turret-preview-card" data-turret-mk="2">
-                    <div class="turret-preview-thumb"><div class="turret-preview-overlay"></div></div>
-                    <div class="turret-preview-label">MK2</div>
-                    <div class="turret-preview-state">Locked</div>
-                  </div>
-                  <div class="turret-preview-card" data-turret-mk="3">
-                    <div class="turret-preview-thumb"><div class="turret-preview-overlay"></div></div>
-                    <div class="turret-preview-label">MK3</div>
-                    <div class="turret-preview-state">Locked</div>
-                  </div>
-                </div>
 
               </div>
             </section>
@@ -2481,6 +2463,19 @@
       </section>
     </section>
   </main>
+
+  <script>
+    if (!window.__tdButtonClickSoundBound) {
+      window.__tdButtonClickSoundBound = true;
+      document.addEventListener('click', (event) => {
+        const control = event.target?.closest?.('button, [role="button"]');
+        if (!control || control.disabled || control.getAttribute('aria-disabled') === 'true') return;
+        const sound = new Audio('/assets/audio/button-click.wav');
+        sound.volume = 0.45;
+        void sound.play().catch(() => {});
+      }, true);
+    }
+  </script>
 
   <script>
     (function () {
@@ -3030,7 +3025,31 @@
         });
       }
 
+      let __overrideBlueprintMode = null;
+      // Listen for mode override from parent (native app via postMessage)
+      window.addEventListener('message', (e) => {
+        if (e.data?.type === 'setBlueprintMode') {
+          __overrideBlueprintMode = e.data.mode;
+        }
+      });
+      
       function isAttackCommanderRole() {
+        // Check for mode override from parent (postMessage, most reliable)
+        if (__overrideBlueprintMode === 'attack' || __overrideBlueprintMode === 'enemy') {
+          return true;
+        }
+        if (__overrideBlueprintMode === 'defense') {
+          return false;
+        }
+        // Check for window property override (legacy fallback)
+        const modeOverride = window.__blueprintMode;
+        if (modeOverride === 'attack' || modeOverride === 'enemy') {
+          return true;
+        }
+        if (modeOverride === 'defense') {
+          return false;
+        }
+        // Check URL parameters (for web/standalone usage)
         try {
           const params = new URLSearchParams(window.location.search || '');
           const modeFlag = String(params.get('mode') || '').toLowerCase();
@@ -3187,10 +3206,6 @@
         const safeTier = clamp(Number(tier) || 1, 1, MAX_TURRET_MK);
         if (safeTier >= 3) return '28.571% 50%';
         return '0% 50%';
-      }
-
-      function isTankUnit(name) {
-        return String(name || '').indexOf('Tank') !== -1;
       }
 
       function getTurretMk(name) {
@@ -3547,8 +3562,8 @@
         const topTitle = document.querySelector('.top-title');
         if (topTitle) topTitle.textContent = 'ATTACK BLUEPRINTS';
 
-        const tabLabels = ['UNITS', 'UPGRADES', 'FORGE', 'REPAIRS', 'BEACONS', 'SYSTEMS'];
-        const tabModes = ['units', 'upgrades', 'disabled', 'disabled', 'disabled', 'disabled'];
+        const tabLabels = ['UNITS'];
+        const tabModes = ['units'];
         document.querySelectorAll('.top-tabs .tab').forEach((tab, idx) => {
           if (tabLabels[idx]) tab.textContent = tabLabels[idx];
           tab.dataset.attackTab = tabModes[idx] || 'disabled';
@@ -3972,6 +3987,12 @@
         }
       }
 
+      function playUpgradeUnlockSound() {
+        const sound = new Audio('/assets/audio/upgrade-unlock.mp3');
+        sound.volume = 0.6;
+        void sound.play().catch(() => {});
+      }
+
       function refreshLevelUpConditions() {
         const name = getCurrentWeaponName();
         if (!name) return;
@@ -4193,56 +4214,6 @@
         roadmapEl.hidden = false;
         roadmapEl.textContent = 'Turret roadmap: MK1 -> MK2 -> MK3. Current: MK'
           + unlockedMk + '. ' + nextUnlockText;
-      }
-
-      function updateTurretUnlockPreview(name) {
-        const previewHost = document.getElementById('turretUnlockPreview');
-        if (!previewHost) return;
-
-        const shouldShow = attackBlueprintMode && isTankUnit(name);
-        if (!shouldShow) {
-          previewHost.hidden = true;
-          previewHost.style.display = 'none';
-          return;
-        }
-
-        const unitEntry = ATTACK_SLIDES.find((entry) => entry.name === name);
-        const bodyPath = unitEntry?.assetPath || '';
-        const unlockedMk = getTurretMk(name);
-
-        Array.from(previewHost.querySelectorAll('.turret-preview-card')).forEach((card) => {
-          const mk = clamp(Number(card.getAttribute('data-turret-mk') || 1), 1, MAX_TURRET_MK);
-          const thumbEl = card.querySelector('.turret-preview-thumb');
-          const overlayEl = card.querySelector('.turret-preview-overlay');
-          const stateEl = card.querySelector('.turret-preview-state');
-
-          card.classList.remove('locked', 'unlocked', 'current', 'next');
-          if (mk < unlockedMk) {
-            card.classList.add('unlocked');
-            if (stateEl) stateEl.textContent = 'Unlocked';
-          } else if (mk === unlockedMk) {
-            card.classList.add('current');
-            if (stateEl) stateEl.textContent = 'Equipped';
-          } else if (mk === unlockedMk + 1) {
-            card.classList.add('next');
-            if (stateEl) stateEl.textContent = 'Next';
-          } else {
-            card.classList.add('locked');
-            if (stateEl) stateEl.textContent = 'Locked';
-          }
-
-          if (thumbEl && bodyPath) {
-            thumbEl.style.backgroundImage = '';
-          }
-          if (overlayEl) {
-            const turretPath = getTankTurretOverlayPath(name, bodyPath, mk);
-            overlayEl.style.backgroundImage = turretPath ? 'url("/' + turretPath + '")' : '';
-            overlayEl.style.backgroundPosition = getTankTurretFramePosition(mk);
-          }
-        });
-
-        previewHost.hidden = false;
-        previewHost.style.display = 'flex';
       }
 
       function updateAttackUpgradeHeaderRoadmap(name) {
@@ -4472,6 +4443,7 @@
           const nextMk = getTurretMk(name) + 1;
           weaponTurretMkByName.set(name, clamp(nextMk, 1, MAX_TURRET_MK));
           syncWeaponRuntimeState(name, cloneStats(stats));
+          playUpgradeUnlockSound();
 
           const feedback = document.getElementById('tierFeedbackText');
           if (feedback) {
@@ -4517,6 +4489,7 @@
         }
         syncWeaponRuntimeState(name, previousStats);
         triggerTierFeedback(name, nextTier);
+        playUpgradeUnlockSound();
       }
 
       function updateWeaponDetailsFromSlide(slide) {
@@ -4568,7 +4541,6 @@
         updateTierRibbons();
         updateLevelUpLabels();
         updateTurretUnlockRoadmap(name);
-        updateTurretUnlockPreview(name);
         updateAttackUpgradeHeaderRoadmap(name);
         updateEvolveUI();
         if (attackBlueprintMode) {

@@ -86,14 +86,6 @@ body {
   margin-left: clamp(20px, 4vw, 56px);
 }
 
-.hero-content::before {
-  content: "";
-  position: absolute;
-  inset: -26px -24px -26px -32px;
-  z-index: -1;
-  background: linear-gradient(90deg, rgba(5, 8, 13, 0.72) 0%, rgba(5, 8, 13, 0.42) 52%, rgba(5, 8, 13, 0) 100%);
-}
-
 .eyebrow {
   margin: 0 0 10px;
   color: var(--cyan);
